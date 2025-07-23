@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+#Streamlit secrets
+.streamlit/
+
+#.env file
+.env
