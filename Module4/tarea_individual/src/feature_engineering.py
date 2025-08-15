@@ -39,79 +39,22 @@ def extract_performance_features(df: pd.DataFrame) -> pd.DataFrame:
     return df[performance_cols]
 
 
-def calculate_rolling_averages(df: pd.DataFrame, 
-                             window_size: int = 3,
-                             min_matches: int = 2) -> pd.DataFrame:
-    """
-    Calculate rolling averages from previous matches for each player.
-    
-    Args:
-        df (pd.DataFrame): Input dataframe
-        window_size (int): Number of previous matches to consider
-        min_matches (int): Minimum matches required to calculate rolling average
-        
-    Returns:
-        pd.DataFrame: Dataframe with rolling average features
-    """
-    logger.info(f"Calculating rolling averages with window size {window_size}")
-    
-    df_rolling = df.copy()
-    
-    # Sort by player and match timestamp (if available) or match_id
-    df_rolling = df_rolling.sort_values(['id', 'match_id'])
-    
-    # Get performance columns
-    performance_cols = extract_performance_features(df_rolling).columns
-    
-    # Calculate rolling averages for each player
-    for col in performance_cols:
-        rolling_col_name = f"{col}_rolling_{window_size}"
-        
-        # Group by player and calculate rolling mean
-        df_rolling[rolling_col_name] = df_rolling.groupby('id')[col].transform(
-            lambda x: x.rolling(window=window_size, min_periods=min_matches).mean()
-        )
-        
-        # Fill NaN values with 0 (for players with insufficient history)
-        df_rolling[rolling_col_name] = df_rolling[rolling_col_name].fillna(0)
-    
-    logger.info(f"Created {len(performance_cols)} rolling average features")
-    
-    return df_rolling
 
 
-def create_match_context_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create match context features (minutes played, substitute status, etc.).
-    
-    Args:
-        df (pd.DataFrame): Input dataframe
-        
-    Returns:
-        pd.DataFrame: Dataframe with context features
-    """
-    logger.info("Creating match context features...")
-    
-    df_context = df.copy()
-    
-    # Minutes played features
-    df_context['minutes_played_pct'] = df_context['minutes_played'] / 90.0
-    df_context['is_starter'] = (df_context['minutes_played'] >= 60).astype(int)
-    df_context['is_substitute'] = (df_context['minutes_played'] < 60).astype(int)
-    
-    # Captain status
-    df_context['is_captain'] = df_context['captain'].astype(int)
-    
-    # Team side (home/away)
-    df_context['is_home'] = (df_context['team_side'] == 'home').astype(int)
-    
-    # Position encoding
-    position_mapping = {'G': 0, 'D': 1, 'M': 2, 'F': 3}
-    df_context['position_encoded'] = df_context['position'].map(position_mapping)
-    
-    logger.info("Created match context features")
-    
-    return df_context
+def add_ratio_features(df, ratio_specs):
+    """Return a new DataFrame with ratio features added (does not modify input df)."""
+    df_new = df.copy()
+    for new_f, spec in ratio_specs.items():
+        num = spec["num"]
+        den = spec["den"]
+        def ratio_row(row):
+            num_sum = sum([row.get(col, 0) for col in num])
+            den_sum = sum([row.get(col, 0) for col in den])
+            if den_sum == 0:
+                return np.nan
+            return num_sum / den_sum
+        df_new[new_f] = df_new.apply(ratio_row, axis=1)
+    return df_new
 
 
 def create_position_specific_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -213,38 +156,7 @@ def normalize_features(df: pd.DataFrame,
     return df_norm
 
 
-def engineer_all_features(df: pd.DataFrame, 
-                         rolling_window: int = 3,
-                         normalize: bool = True) -> pd.DataFrame:
-    """
-    Apply all feature engineering steps to create the final feature set.
-    
-    Args:
-        df (pd.DataFrame): Input dataframe
-        rolling_window (int): Window size for rolling averages
-        normalize (bool): Whether to normalize features
-        
-    Returns:
-        pd.DataFrame: Dataframe with all engineered features
-    """
-    logger.info("Starting comprehensive feature engineering...")
-    
-    # Step 1: Calculate rolling averages
-    df_features = calculate_rolling_averages(df, window_size=rolling_window)
-    
-    # Step 2: Create match context features
-    df_features = create_match_context_features(df_features)
-    
-    # Step 3: Create position-specific features
-    df_features = create_position_specific_features(df_features)
-    
-    # Step 4: Normalize features if requested
-    if normalize:
-        df_features = normalize_features(df_features)
-    
-    logger.info(f"Feature engineering completed. Final shape: {df_features.shape}")
-    
-    return df_features
+
 
 
 if __name__ == "__main__":

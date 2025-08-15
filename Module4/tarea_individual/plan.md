@@ -40,10 +40,10 @@ Module4/tarea_individual/
 
 ### Task 1.3: Data Quality Assessment
 
-- [ ] Analyze data completeness and missing values
-- [ ] Check rating distribution and identify any outliers
-- [ ] Determine minimum minutes threshold for reliable ratings
-- [ ] Document data schema and field descriptions
+- [X] Analyze data completeness and missing values
+- [X] Check rating distribution and identify any outliers
+- [X] Determine minimum minutes threshold for reliable ratings (>15 minutes)
+- [X] Document data schema and field descriptions
 
 ## Phase 2: Data Preprocessing & Feature Engineering
 
